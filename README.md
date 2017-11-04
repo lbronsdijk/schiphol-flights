@@ -2,7 +2,7 @@
 
 > Schiphol Flights
 
-Schiphol Flights is a platform that gives you a detailed overview of departing and arrival flights from Schiphol Airport.
+Schiphol Flights is a platform that gives you a detailed overview of departing and arriving flights from Schiphol Airport.
 
 ## Build Setup
 
