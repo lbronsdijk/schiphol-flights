@@ -24,7 +24,7 @@
             <td>
               <ul>
                 <li v-for="(value, index) in flight.route.destinations">
-                  {{ value | convertDestinationAlias }}
+                  {{ value }}
                 </li>
               </ul>
             </td>
@@ -68,15 +68,39 @@ export default {
       errors: []
     }
   },
-  // Fetches posts when the component is created.
-  async created () {
-    try {
-      const response = await axios.get(`https://api.schiphol.nl/public-flights/flights?app_id=6c9eb2dd&app_key=6ca7fa38511113d40eef358fa2813539&scheduletime=17%3A37&flightdirection=D&includedelays=false&page=0&sort=%2Bscheduletime`, config)
+  created () {
+    // Async method for fetching flights
+    const getFlights = async () => {
+      // Fetch all flights
+      const flightsResponse = await axios.get(`https://api.schiphol.nl/public-flights/flights?app_id=6c9eb2dd&app_key=6ca7fa38511113d40eef358fa2813539&scheduletime=15%3A16&flightdirection=D&includedelays=false&page=0&sort=%2Bscheduletime`, config)
 
-      this.flights = response.data.flights
-    } catch (e) {
-      this.errors.push(e)
+      // Fetch all destination names by their code.
+      const flights = flightsResponse.data.flights.map(async flight => {
+        const destinations = await flight.route.destinations.map(async (destination) => {
+          const destinationResponse = await axios.get(`https://api.schiphol.nl/public-flights/destinations/` + destination + `?app_id=6c9eb2dd&app_key=6ca7fa38511113d40eef358fa2813539`, configSecond)
+          // Return full destination name
+          return destinationResponse.data.publicName.english
+        })
+
+        // Overwrite destination property with promise
+        flight.route.destinations = await Promise.all(destinations)
+
+        // Return flight
+        return flight
+      })
+
+      // Resolve all flights
+      return Promise.all(flights)
     }
+
+    // Perform the async getFlights call.
+    getFlights()
+      .then((flights) => {
+        this.flights = flights
+      })
+      .catch((e) => {
+        this.errors.push(e)
+      })
   },
   filters: {
     convertTime: function (timestamp, inputFormat = 'HH:mm:ss', outputFormat = 'HH:mm') {
@@ -93,16 +117,20 @@ export default {
 
       return moment.utc(timestamp).format(outputFormat)
     },
-    convertDestinationAlias: function (alias) {
-      axios.get(`https://api.schiphol.nl/public-flights/destinations/MUC?app_id=6c9eb2dd&app_key=6ca7fa38511113d40eef358fa2813539`, configSecond)
+    convertDestinationAlias: async function (alias) {
+      let destination = '-'
+
+      console.log(alias)
+
+      axios.get(`https://api.schiphol.nl/public-flights/destinations/` + alias + `?app_id=6c9eb2dd&app_key=6ca7fa38511113d40eef358fa2813539`, configSecond)
         .then(function (response) {
-          console.log(response)
+          // console.log(response)
         })
         .catch(function (error) {
           console.log(error)
         })
 
-      return alias
+      return destination
     },
     convertFlightStateAlias: function (value) {
       let shortStatus = value.toLowerCase()
